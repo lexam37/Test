@@ -3,45 +3,54 @@
 <head>
   <meta charset="UTF-8">
   <title>Surveillance Bloc BTC</title>
+  <style>
+    body { font-family: sans-serif; padding: 2em; }
+    #status { margin-top: 1em; font-size: 1.2em; }
+  </style>
 </head>
 <body>
-  <h2>Surveillance du dernier bloc BTC</h2>
-  <div id="status">En attente du prochain bloc…</div>
+  <h2>🔍 Surveillance du dernier bloc Bitcoin</h2>
+  <div id="status">Chargement en cours...</div>
 
   <script>
-    // Récupération du hash précédemment stocké dans le navigateur
-    let lastHash = localStorage.getItem('lastBlockHash');
+    // Récupération du dernier bloc mémorisé
+    let lastKnownHeight = localStorage.getItem('lastBlockHeight');
 
     async function checkBlock() {
       try {
-        const res = await fetch('https://blockchain.info/latestblock');
-        const data = await res.json();
+        const res = await fetch('https://mempool.space/api/blocks');
+        const blocks = await res.json();
+        const latestBlock = blocks[0]; // Le bloc le plus récent
+        const currentHeight = latestBlock.height;
 
-        const currentHash = data.hash;
-        const currentHeight = data.height;
+        // Affichage simple
+        document.getElementById('status').innerText = `Dernier bloc détecté : #${currentHeight}`;
 
-        if (currentHash !== lastHash) {
-          document.getElementById('status').innerText = `🟢 Nouveau bloc #${currentHeight}`;
-          lastHash = currentHash;
+        // Si un nouveau bloc est arrivé
+        if (currentHeight != lastKnownHeight) {
+          if (lastKnownHeight !== null) {
+            // Envoie la notif via ntfy
+            await fetch('https://ntfy.sh/maxbtcblock', {
+              method: 'POST',
+              body: `🚨 Nouveau bloc Bitcoin détecté : #${currentHeight}`
+            });
+          }
 
-          // Stockage dans localStorage
-          localStorage.setItem('lastBlockHash', currentHash);
-
-          // Envoie de la notification via ntfy.sh
-          await fetch('https://ntfy.sh/maxbtcblock', {
-            method: 'POST',
-            body: `🚨 Nouveau bloc BTC #${currentHeight}`
-          });
-        } else {
-          document.getElementById('status').innerText = `Aucun nouveau bloc (#${currentHeight})`;
+          // Met à jour localStorage et variable
+          lastKnownHeight = currentHeight;
+          localStorage.setItem('lastBlockHeight', currentHeight);
         }
       } catch (err) {
-        console.error("Erreur :", err);
         document.getElementById('status').innerText = `❌ Erreur : ${err}`;
+        console.error(err);
       }
     }
 
-    setInterval(checkBlock, 10000); // toutes les 10 secondes
+    // Check toutes les 1 seconde
+    setInterval(checkBlock, 1000);
+
+    // Lancer immédiatement au chargement
+    checkBlock();
   </script>
 </body>
 </html>
