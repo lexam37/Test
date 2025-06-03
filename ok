@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Surveillance Bloc BTC</title>
+</head>
+<body>
+  <h2>Surveillance du dernier bloc BTC</h2>
+  <div id="status">En attente du prochain bloc…</div>
+
+  <script>
+    let lastHash = null;
+
+    async function checkBlock() {
+      try {
+        const res = await fetch('https://blockchain.info/latestblock');
+        const data = await res.json();
+
+        const currentHash = data.hash;
+        const currentHeight = data.height;
+
+        if (currentHash !== lastHash) {
+          document.getElementById('status').innerText = `🟢 Nouveau bloc #${currentHeight}`;
+          lastHash = currentHash;
+
+          // Notification via ntfy.sh
+          await fetch('https://ntfy.sh/maxbtcblock', {
+            method: 'POST',
+            body: `🚨 Nouveau bloc BTC #${currentHeight}`
+          });
+        }
+      } catch (err) {
+        console.error("Erreur :", err);
+        document.getElementById('status').innerText = `❌ Erreur : ${err}`;
+      }
+    }
+
+    setInterval(checkBlock, 1000);
+  </script>
+</body>
+</html>
