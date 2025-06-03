@@ -9,7 +9,8 @@
   <div id="status">En attente du prochain bloc…</div>
 
   <script>
-    let lastHash = null;
+    // Récupération du hash précédemment stocké dans le navigateur
+    let lastHash = localStorage.getItem('lastBlockHash');
 
     async function checkBlock() {
       try {
@@ -23,11 +24,16 @@
           document.getElementById('status').innerText = `🟢 Nouveau bloc #${currentHeight}`;
           lastHash = currentHash;
 
-          // Notification via ntfy.sh
+          // Stockage dans localStorage
+          localStorage.setItem('lastBlockHash', currentHash);
+
+          // Envoie de la notification via ntfy.sh
           await fetch('https://ntfy.sh/maxbtcblock', {
             method: 'POST',
             body: `🚨 Nouveau bloc BTC #${currentHeight}`
           });
+        } else {
+          document.getElementById('status').innerText = `Aucun nouveau bloc (#${currentHeight})`;
         }
       } catch (err) {
         console.error("Erreur :", err);
@@ -35,7 +41,7 @@
       }
     }
 
-    setInterval(checkBlock, 10000);
+    setInterval(checkBlock, 10000); // toutes les 10 secondes
   </script>
 </body>
 </html>
